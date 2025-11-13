@@ -1,0 +1,57 @@
+# Config/park.yaml
+
+time:
+  speed_factor: 0.05          # 1 simulated minute = 0.05 real seconds
+  open_minutes: 600           # 10 hours (10:00 to 20:00)
+
+arrival:
+  visitors_per_minute: 3      # average visitors arriving per simulated minute
+  variation: 1                # +/- 1 random variation
+  visitor_types:              # relative probabilities for each type
+    Child: 0.3
+    Tourist: 0.5
+    AdrenalineAddict: 0.2
+
+policy:
+  fastpass: true              # enable priority queue for some visitors
+  hunger_prob_per_hour: 0.25  # 25% chance per hour a visitor goes to eat
+
+rides:
+  - name: ThunderCoaster
+    capacity: 24
+    run_duration: 5
+    board_window: 2
+    queue_capacity: 100
+    popularity: 0.9     # 0.0–1.0 (higher = more attractive)
+
+  - name: Carousel
+    capacity: 16
+    run_duration: 3
+    board_window: 1
+    queue_capacity: 60
+    popularity: 0.5
+
+  - name: HauntedMansion
+    capacity: 20
+    run_duration: 4
+    board_window: 2
+    queue_capacity: 80
+    popularity: 0.7
+
+  - name: SkyDrop          
+    capacity: 12
+    run_duration: 4
+    board_window: 2
+    queue_capacity: 70
+    popularity: 0.8
+food:
+  - name: BurgerTruck
+    service_time: [3, 6]      # range in minutes per order
+    capacity: 10
+  - name: IceCreamStand
+    service_time: [2, 5]
+    capacity: 8
+
+maintenance:
+  mean_uptime: 120            # mean minutes between breakdowns
+  mean_repair: 10             # mean minutes for repairs
