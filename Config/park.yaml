@@ -1,7 +1,7 @@
 # Config/park.yaml
 
 time:
-  speed_factor: 0.05          # 1 simulated minute = 0.05 real seconds
+  speed_factor: 0.3         # 1 simulated minute = 0.05 real seconds
   open_minutes: 600           # 10 hours (10:00 to 20:00)
 
 arrival:
