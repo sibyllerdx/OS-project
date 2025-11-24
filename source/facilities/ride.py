@@ -86,7 +86,7 @@ class Ride(threading.Thread):
                 pass
 
     # ---- External triggers for maintenance/failures ----
-         def is_broken(self) -> bool:
+    def is_broken(self) -> bool:
         """
         Returns True if the ride is currently not operational.
         We treat both BROKEN and MAINTENANCE as 'down'.
