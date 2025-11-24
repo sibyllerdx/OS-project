@@ -96,7 +96,7 @@ class Ride(threading.Thread):
         except Exception:
             # fallback if state not bound yet
             state_name = str(getattr(self._state, "__class__", type(self._state)).__name__)
-        return state_name in ("BROKEN", "MAINTENANCE"
+        return state_name in ("BROKEN", "MAINTENANCE")
 
     def break_for(self, repair_minutes):
         now = self.clock.now()
