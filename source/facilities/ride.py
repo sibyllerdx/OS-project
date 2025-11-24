@@ -86,8 +86,17 @@ class Ride(threading.Thread):
                 pass
 
     # ---- External triggers for maintenance/failures ----
-     def is_broken(self):
-        return self.clock.now() < self._broken_until
+         def is_broken(self) -> bool:
+        """
+        Returns True if the ride is currently not operational.
+        We treat both BROKEN and MAINTENANCE as 'down'.
+        """
+        try:
+            state_name = self._state.name()
+        except Exception:
+            # fallback if state not bound yet
+            state_name = str(getattr(self._state, "__class__", type(self._state)).__name__)
+        return state_name in ("BROKEN", "MAINTENANCE"
 
     def break_for(self, repair_minutes):
         now = self.clock.now()
