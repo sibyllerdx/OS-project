@@ -1,0 +1,39 @@
+from maintenance import MaintenanceDaemon
+import time, threading, random
+
+# --- dummy clock ---
+class DummyClock:
+    def __init__(self, total=20):
+        self._min = 0
+        self._stop = False
+        self._limit = total
+    def now(self): return self._min
+    def sleep_minutes(self, n):
+        time.sleep(0.05 * n)     # fast simulation
+        self._min += n
+        if self._min >= self._limit:
+            self._stop = True
+    def should_stop(self): return self._stop
+
+# --- dummy ride that can break and repair itself ---
+class Ride:
+    def __init__(self, name):
+        self.name = name
+    def break_for(self, repair_minutes):
+        print(f"[minute {clock.now()}] {self.name} BREAKS for {repair_minutes} minutes")
+        def repair():
+            start = clock.now()
+            while clock.now() - start < repair_minutes and not clock.should_stop():
+                time.sleep(0.01)
+            print(f"[minute {clock.now()}] {self.name} REPAIRED")
+        threading.Thread(target=repair, daemon=True).start()
+
+# --- run the maintenance test ---
+clock = DummyClock(total=30)
+rides = [Ride("RollerCoaster"), Ride("DropTower")]
+
+maintenance = MaintenanceDaemon(rides, clock, mean_uptime=5, mean_repair=3)
+maintenance.start()
+maintenance.join()
+
+print("Done.")
