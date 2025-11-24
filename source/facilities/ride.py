@@ -17,6 +17,9 @@ class Ride(threading.Thread):
         self.clock = clock
         self.metrics = metrics
         self.popularity = popularity
+        self._broken_until = 0
+        self._repair_thread = None
+
 
         # Instantiate states
         self.open = OpenState()
@@ -83,11 +86,30 @@ class Ride(threading.Thread):
                 pass
 
     # ---- External triggers for maintenance/failures ----
-    def break_for(self, repair_minutes: int):
-        """Called by maintenance: ride is broken until repaired."""
-        with self._lock:
-            self.transition_to(BrokenState(repair_minutes))
+     def is_broken(self):
+        return self.clock.now() < self._broken_until
 
-    def take_down_for_maintenance(self, minutes: int):
+    def break_for(self, repair_minutes):
+        now = self.clock.now()
+        ext = max(1, int(repair_minutes))
         with self._lock:
-            self.transition_to(MaintenanceState(minutes))
+            was_broken = self.is_broken()
+            self._broken_until = max(self._broken_until, now + ext)
+            if not was_broken:
+                print(f"[minute {now}] {self.name} BREAKS for {ext} minutes")
+                if self._repair_thread is None or not self._repair_thread.is_alive():
+                    self._repair_thread = threading.Thread(target=self._repair_guardian, daemon=True)
+                    self._repair_thread.start()
+            # if already broken, we silently extend; no duplicate print
+
+    def _repair_guardian(self):
+        printed = False
+        while not self.clock.should_stop():
+            now = self.clock.now()
+            with self._lock:
+                if now >= self._broken_until:
+                    if not printed:
+                        print(f"[minute {now}] {self.name} REPAIRED")
+                        printed = True
+                    break
+            time.sleep(0.01)
