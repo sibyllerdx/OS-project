@@ -92,8 +92,8 @@ Handles all the **physical parts of the park** (rides, food areas, queues).
 - **queues.py** — Thread-safe queue logic for rides or food stalls.  
   Handles both regular and priority queues, as well as patience and abandonment.
 
-- **food.py** — Defines `Restaurant` and/or `FoodTruck` classes.  
-  Simulates food service, ordering, and visitor waiting times.
+- **food.py** — Defines Base Food Facility class and then instances of said class like Burger Truck and Ice Cream Stand.  
+  Simulates ordering, cook time, food service and visitor waiting times/service times.
 
 ---
 
