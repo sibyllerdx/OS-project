@@ -5,13 +5,25 @@ time:
   open_minutes: 600           # 10 hours (10:00 to 20:00)
 
 arrival:
-  visitors_per_minute: 3      # average visitors arriving per simulated minute
-  variation: 1                # +/- 1 random variation
-  visitor_types:              # relative probabilities for each type
-    Child: 0.3
-    Tourist: 0.5
-    AdrenalineAddict: 0.2
+  # Piecewise-linear rate (expected arrivals per simulated minute)
+  curve_points:
+    - { minute: 0,   mean: 1.0 }   # doors open: a trickle
+    - { minute: 30,  mean: 4.0 }   # building
+    - { minute: 60,  mean: 8.0 }   # PEAK ~1h after opening
+    - { minute: 120, mean: 5.5 }   # late morning
+    - { minute: 240, mean: 3.0 }   # early afternoon
+    - { minute: 360, mean: 1.8 }   # late afternoon
+    - { minute: 480, mean: 0.8 }   # evening taper
 
+  # Optional extra noise on top of the curve (in arrivals/min, not %)
+  jitter: 0.5
+
+  # Visitor mix (probabilities; they’ll be normalized)
+  visitor_types:
+    Child: 0.30
+    Tourist: 0.50
+    AdrenalineAddict: 0.20
+    
 policy:
   fastpass: true              # enable priority queue for some visitors
   hunger_prob_per_hour: 0.25  # 25% chance per hour a visitor goes to eat
