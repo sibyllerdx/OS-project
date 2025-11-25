@@ -1,90 +1,92 @@
 # source/park/arrival.py
-import threading, random, math
+import threading
+import random
+import numpy as np
 
-
-def _poisson(lmbda: float) -> int:
-    """Knuth Poisson sampler, number of arrival per minute."""
-    if lmbda <= 0:
-        return 0
-    L = math.exp(-lmbda)
-    k = 0
-    p = 1.0
-    while p > L:
-        k += 1
-        p *= random.random()
-    return k - 1
 
 class ArrivalGenerator(threading.Thread):
     """
-    Spawns visitor threads minute-by-minute following a skewed arrival curve.
-    Expects:
-      - clock:      core.Clock
-      - park:       object with create_visitor(vtype, ids) -> Visitor
-      - ids:        id generator (e.g., core.Ids)
-      - metrics:    metrics recorder (can be None)
-      - curve_pts:  list of dicts: {'minute': int, 'mean': float}
-      - visitor_mix: dict: {'Child': 0.3, 'Tourist': 0.5, ...}
-      - jitter:     optional float; added noise in arrivals/minute
+    Generates visitors minute by minute using a Poisson process.
+
+    - curve_points: list of {'minute': int, 'mean': float}
+    - visitor_mix:  dict like {'Child': 0.3, 'Tourist': 0.5, ...}
+    - jitter:       optional noise added to the mean arrivals per minute
     """
-    def __init__(self, clock, park, ids, metrics, curve_pts, visitor_mix, jitter: float = 0.0):
+    def __init__(self, clock, park, ids, metrics, curve_points, visitor_mix, jitter: float = 0.0):
         super().__init__(daemon=True)
         self.clock = clock
         self.park = park
         self.ids = ids
         self.metrics = metrics
-        # sanitize + sort points
+
+        # Store (minute, mean) pairs sorted by minute
         self.points = sorted(
-            [{'minute': int(p['minute']), 'mean': float(p['mean'])} for p in curve_pts],
-            key=lambda p: p['minute']
+            [(int(p["minute"]), float(p["mean"])) for p in curve_points],
+            key=lambda x: x[0]
         )
-        # normalize visitor mix to probabilities
-        #Stores the names in vtypes and their relative weights in vweights.
+
+        # Normalize visitor mix
         total = sum(visitor_mix.values())
         self.vtypes = list(visitor_mix.keys())
         self.vweights = [v / total for v in visitor_mix.values()]
+
         self.jitter = float(jitter or 0.0)
 
-    # -------- curve evaluation --------
+    # ---- curve evaluation ----
     def _mean_at(self, minute: int) -> float:
         """Linear interpolation between control points; clamp at ends."""
         pts = self.points
-        if minute <= pts[0]['minute']:
-            return pts[0]['mean']
-        if minute >= pts[-1]['minute']:
-            return pts[-1]['mean']
-        
-        # find segment
-        for i in range(len(pts) - 1):
-            a, b = pts[i], pts[i + 1]
-            #Finds the two points surrounding the current minute.
-            if a['minute'] <= minute <= b['minute']:
-                span = b['minute'] - a['minute']
-                t = 0.0 if span == 0 else (minute - a['minute']) / span
-                return a['mean'] + t * (b['mean'] - a['mean'])
-            #estimate the expected mean arrival rate between them.
-        return pts[-1]['mean']  # fallback
+
+        if minute <= pts[0][0]:
+            return pts[0][1]
+        if minute >= pts[-1][0]:
+            return pts[-1][1]
+
+        for (m1, y1), (m2, y2) in zip(pts, pts[1:]):
+            if m1 <= minute <= m2:
+                span = m2 - m1
+                t = 0.0 if span == 0 else (minute - m1) / span
+                return y1 + t * (y2 - y1)
+
+        return pts[-1][1]
 
     def _sample_count(self, base_mean: float) -> int:
-        """Poisson(base_mean + jitter) with non-negative clamp."""
-        # small symmetric noise
-        noisy = max(0.0, base_mean + (random.uniform(-self.jitter, self.jitter) if self.jitter else 0.0))
-        return _poisson(noisy)
+        """Poisson(base_mean + jitter), clamped to non-negative."""
+        if base_mean <= 0:
+            return 0
 
-    # -------- thread loop --------
+        if self.jitter:
+            base_mean = base_mean + random.uniform(-self.jitter, self.jitter)
+
+        lam = max(0.0, base_mean)
+        if lam == 0:
+            return 0
+
+        # numpy handles the Poisson sampling for us
+        return int(np.random.poisson(lam))
+
+    # ---- thread loop ----
     def run(self):
         while not self.clock.should_stop():
             minute = self.clock.now()
-            mean_rate = self._mean_at(minute) #Computes the expected arrival rate for that minute.
+
+            mean_rate = self._mean_at(minute)
             n_new = self._sample_count(mean_rate)
+            v = self.park.create_visitor(vtype, self.ids)
+            if not v:
+                break  
+
             for _ in range(n_new):
                 vtype = random.choices(self.vtypes, weights=self.vweights, k=1)[0]
-                v = self.park.create_visitor(vtype, self.ids)  # your Park should return a started-but-not-running visitor
+                v = self.park.create_visitor(vtype, self.ids)
                 v.start()
+
                 if self.metrics:
                     try:
                         self.metrics.record_arrival(v.vid, vtype, minute)
                     except Exception:
+                        # keep the simulation running even if metrics fail
                         pass
 
-            # advance one simulated minute
+            # one simulated minute
             self.clock.sleep_minutes(1)
