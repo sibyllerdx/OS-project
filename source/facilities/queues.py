@@ -75,18 +75,18 @@ class RideQueue:
 
             self._not_empty.notify() #wake a ride thread that is waiting for arrival
 
-            # record metrics
-            if self.metrics:
-                try:
-                    self.metrics._write({
-                        "sim_minute": now_minute,
-                        "event": "queue_join",
-                        "visitor_id": getattr(obj, "vid", None),
-                        "ride_name": self.name,
-                        "reason": "priority" if priority else "regular",
-                    })
-                except Exception:
-                    pass
+            # record metrics (commented out - metrics handled at ride level)
+            # if self.metrics:
+            #     try:
+            #         self.metrics._write({
+            #             "sim_minute": now_minute,
+            #             "event": "queue_join",
+            #             "visitor_id": getattr(obj, "vid", None),
+            #             "ride_name": self.name,
+            #             "reason": "priority" if priority else "regular",
+            #         })
+            #     except Exception:
+            #         pass
 
             return True #if teh item was enqueued 
 
@@ -111,16 +111,17 @@ class RideQueue:
                 else:
                     removed = False
 
-        if removed and self.metrics and now_minute is not None:
-            try:
-                self.metrics.record_abandon(
-                    visitor_id=getattr(obj, "vid", None),
-                    ride_name=self.name,
-                    waited_minutes=0,
-                    sim_minute=now_minute,
-                )
-            except Exception:
-                pass
+        # Metrics handled at ride level
+        # if removed and self.metrics and now_minute is not None:
+        #     try:
+        #         self.metrics.record_abandon(
+        #             visitor_id=getattr(obj, "vid", None),
+        #             ride_name=self.name,
+        #             waited_minutes=0,
+        #             sim_minute=now_minute,
+        #         )
+        #     except Exception:
+        #         pass
         return removed
 
     def _rotate_remove(self, dq: Deque[QueueItem], index: int) -> None:

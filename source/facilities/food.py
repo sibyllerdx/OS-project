@@ -33,7 +33,8 @@ class BaseFoodFacility(threading.Thread):
         self._inflight.append(InFlightOrder(visitor=visitor, eta_minute=eta))
         if self.metrics:
             try:
-                self.metrics.record_order(visitor.id, self.name, now_minute)
+                visitor_id = getattr(visitor, 'vid', getattr(visitor, 'id', None))
+                self.metrics.record_order(visitor_id, self.name, now_minute)
             except Exception:
                 pass
 
@@ -48,7 +49,8 @@ class BaseFoodFacility(threading.Thread):
                 pass
             if self.metrics:
                 try:
-                    self.metrics.record_served(order.visitor.id, self.name, now_minute)
+                    visitor_id = getattr(order.visitor, 'vid', getattr(order.visitor, 'id', None))
+                    self.metrics.record_served(visitor_id, self.name, now_minute)
                 except Exception:
                     pass
 
@@ -59,7 +61,7 @@ class BaseFoodFacility(threading.Thread):
                 self._finish_orders(now)
                 slots = self.capacity - len(self._inflight)
                 for _ in range(slots):
-                    item = self.queue.dequeue()
+                    item = self.queue.get_next(block=False, clock=self.clock)
                     if not item:
                         break
                     visitor = getattr(item, "obj", item)

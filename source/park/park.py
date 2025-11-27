@@ -1,4 +1,7 @@
-from source.park.visitor_factory import ChildCreator, TouristCreator, AdrenalineAddictCreator
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from park.visitor_factory import ChildCreator, TouristCreator, AdrenalineAddictCreator
 
 class Park:
     def __init__(self, clock, metrics):
@@ -42,3 +45,13 @@ class Park:
         if not ok:
             # queue full; visitor could try a different ride or eat
             pass
+
+    def get_food_facilities(self):
+        """Return list of available food facilities."""
+        return getattr(self, 'food_facilities', [])
+
+    def join_food_queue(self, visitor, facility):
+        """Add visitor to food facility queue."""
+        now = self.clock.now()
+        ok = facility.queue.enqueue(visitor, now_minute=now)
+        return ok
