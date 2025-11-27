@@ -1,7 +1,10 @@
 # source/park/visitor_factory.py
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from source.visitors.base import Visitor, Child, Tourist, AdrenalineAddict
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from visitors.base import Visitor, Child, Tourist, AdrenalineAddict
 
 class VisitorCreator(ABC):
     """Abstract Creator: defines the factory method interface."""

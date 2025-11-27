@@ -1,9 +1,13 @@
 # source/facilities/ride.py
 import threading
+import time
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from typing import List
-from source.core import Clock
-from source.facilities.queues import RideQueue
-from source.facilities.ride_states import OpenState, BoardingState, BrokenState, MaintenanceState, RideState
+from core import Clock
+from facilities.queues import RideQueue
+from facilities.ride_states import OpenState, BoardingState, BrokenState, MaintenanceState, RideState
 
 class Ride(threading.Thread):
     def __init__(self, name: str, capacity: int, run_duration: int, board_window: int,
@@ -58,11 +62,32 @@ class Ride(threading.Thread):
 
     # ---- Ride thread loop ----
     def run(self):
+        last_queue_report = 0
+        queue_report_interval = 5  # Report queue length every 5 minutes
+        
         while not self.clock.should_stop():
+            # Periodically report queue length for wait time tracking
+            current_minute = self.clock.now()
+            if current_minute - last_queue_report >= queue_report_interval:
+                queue_length = self.queue.size()
+                if self.metrics:
+                    try:
+                        self.metrics.record_queue_length(self.name, queue_length, current_minute)
+                    except Exception:
+                        pass
+                last_queue_report = current_minute
+            
             # Let the state do one minute worth of work
             self._state.tick()
             # advance sim time by 1 minute
             self.clock.sleep_minutes(1)
+        
+        # Final queue length report at shutdown
+        if self.metrics:
+            try:
+                self.metrics.record_queue_length(self.name, self.queue.size(), self.clock.now())
+            except Exception:
+                pass
 
     # ---- Operations used by states ----
     def _run_cycle(self, batch: List):
@@ -106,6 +131,12 @@ class Ride(threading.Thread):
             self._broken_until = max(self._broken_until, now + ext)
             if not was_broken:
                 print(f"[minute {now}] {self.name} BREAKS for {ext} minutes")
+                # Record breakdown event
+                if self.metrics:
+                    try:
+                        self.metrics.record_breakdown(self.name, now, ext)
+                    except Exception:
+                        pass
                 if self._repair_thread is None or not self._repair_thread.is_alive():
                     self._repair_thread = threading.Thread(target=self._repair_guardian, daemon=True)
                     self._repair_thread.start()
@@ -119,6 +150,12 @@ class Ride(threading.Thread):
                 if now >= self._broken_until:
                     if not printed:
                         print(f"[minute {now}] {self.name} REPAIRED")
+                        # Record repair event
+                        if self.metrics:
+                            try:
+                                self.metrics.record_repair(self.name, now)
+                            except Exception:
+                                pass
                         printed = True
                     break
             time.sleep(0.01)

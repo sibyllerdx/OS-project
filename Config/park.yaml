@@ -1,27 +1,38 @@
 # Config/park.yaml
 
 time:
-  speed_factor: 0.3         # 1 simulated minute = 0.05 real seconds
-  open_minutes: 600           # 10 hours (10:00 to 20:00)
+  speed_factor: 0.3         # 1 simulated minute = 0.3 real seconds
+  open_minutes: 660           # 11 hours (10 AM to 9 PM)
 
 arrival:
+  # Total visitors to enter the park throughout the day
+  total_visitors: 250
+  
   # Piecewise-linear rate (expected arrivals per simulated minute)
+  # Based on exact Shapeland arrival distribution graph
+  # Time: 10 AM (minute 0) to 9 PM (minute 660) - 11 hour operating day
+  # Distribution: 5% at 10AM, 15% at 11AM, 23% at 12PM, 18% at 1PM, 19% at 2PM, 10% at 3PM, 4% at 4PM, 1-2% remaining
   curve_points:
-    - { minute: 0,   mean: 1.0 }   # doors open: a trickle
-    - { minute: 30,  mean: 4.0 }   # building
-    - { minute: 60,  mean: 8.0 }   # PEAK ~1h after opening
-    - { minute: 120, mean: 5.5 }   # late morning
-    - { minute: 240, mean: 3.0 }   # early afternoon
-    - { minute: 360, mean: 1.8 }   # late afternoon
-    - { minute: 480, mean: 0.8 }   # evening taper
+    - { minute: 0,   mean: 2.5 }   # 10 AM - 5% of daily arrivals
+    - { minute: 60,  mean: 7.5 }   # 11 AM - 15% of daily arrivals  
+    - { minute: 120, mean: 11.5 }  # 12 PM - 23% PEAK
+    - { minute: 180, mean: 9.0 }   # 1 PM - 18%
+    - { minute: 240, mean: 9.5 }   # 2 PM - 19%
+    - { minute: 300, mean: 5.0 }   # 3 PM - 10%
+    - { minute: 360, mean: 2.0 }   # 4 PM - 4%
+    - { minute: 420, mean: 1.0 }   # 5 PM - 2%
+    - { minute: 480, mean: 0.5 }   # 6 PM - 1%
+    - { minute: 540, mean: 0.5 }   # 7 PM - 1%
+    - { minute: 600, mean: 0.3 }   # 8 PM - <1%
+    - { minute: 660, mean: 0.0 }   # 9 PM - closing
 
   # Optional extra noise on top of the curve (in arrivals/min, not %)
   jitter: 0.5
 
-  # Visitor mix (probabilities; they’ll be normalized)
+  # Visitor mix (probabilities; they'll be normalized)
   visitor_types:
-    Child: 0.30
-    Tourist: 0.50
+    Child: 0.20
+    Tourist: 0.60
     AdrenalineAddict: 0.20
     
 policy:
