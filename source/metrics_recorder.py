@@ -138,7 +138,7 @@ class MetricsRecorder:
                 self._fh.close()
 
     # ---------- visualization ----------
-    def generate_wait_time_graph(self):
+    def generate_wait_time_graph(self, include_rides: list = None):
         """Generate attraction wait time graph from metrics."""
         if not HAS_MATPLOTLIB:
             print("⚠️  matplotlib not available, skipping graph generation")
@@ -175,6 +175,11 @@ class MetricsRecorder:
         except Exception as e:
             print(f"⚠️  Error reading metrics for graph: {e}")
             return
+
+        # If include_rides is provided, filter to only those rides so old/removed
+        # attractions present in the CSV won't appear on the graph.
+        if include_rides is not None:
+            queue_data = {k: v for k, v in queue_data.items() if k in set(include_rides)}
 
         if not queue_data:
             print("⚠️  No queue data available for graphing")

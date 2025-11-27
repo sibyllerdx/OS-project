@@ -127,7 +127,13 @@ class Child(Visitor):
     def __init__(self, vid, park, clock, metrics):
         super().__init__(vid, park, clock, metrics)
         self.profile["kind"] = "Child"
-        self.ride_prefs = {"Carousel": 1.6, "ThunderCoaster": 0.8, "SkyDrop": 0.5, "HauntedMansion": 0.7}
+        # Updated to match programmatic ride instances
+        self.ride_prefs = {
+            "SpinningTeacups": 1.6,
+            "FerrisWheel": 1.2,
+            "BumperCars": 0.9,
+            "HauntedHouse": 0.7,
+        }
         self.strategy = PreferenceStrategy()
         self.patience = random.randint(10, 25)  # Kids are less patient
         
@@ -143,7 +149,13 @@ class Tourist(Visitor):
     def __init__(self, vid, park, clock, metrics):
         super().__init__(vid, park, clock, metrics)
         self.profile["kind"] = "Tourist"
-        self.ride_prefs = {"Carousel": 1.0, "ThunderCoaster": 1.0, "SkyDrop": 1.0, "HauntedMansion": 1.0}
+        # Tourists like a variety of attractions
+        self.ride_prefs = {
+            "FerrisWheel": 1.0,
+            "RollerCoaster": 1.0,
+            "SpinningTeacups": 0.8,
+            "HauntedHouse": 0.8,
+        }
         self.strategy = RandomStrategy()
         
         # Tourists stay moderate to long periods (4-7 hours)
@@ -158,7 +170,15 @@ class AdrenalineAddict(Visitor):
     def __init__(self, vid, park, clock, metrics):
         super().__init__(vid, park, clock, metrics)
         self.profile["kind"] = "AdrenalineAddict"
-        self.ride_prefs = {"Carousel": 0.4, "ThunderCoaster": 1.8, "SkyDrop": 1.6, "HauntedMansion": 0.8}
+        # High-thrill preferences match the programmatic rides
+        self.ride_prefs = {
+            "SpinningTeacups": 0.3,
+            "RollerCoaster": 1.8,
+            "DropTower": 1.6,
+            "SplashMountain": 1.4,
+            "SpaceSimulator": 1.5,
+            "PirateShip": 1.0,
+        }
         self.strategy = PopularityWaitTradeoff(wait_penalty_after=8)
         self.has_fastpass = random.random() < 0.4  # Higher chance of fastpass (40%)
         
