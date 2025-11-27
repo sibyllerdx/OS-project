@@ -18,6 +18,8 @@ from facilities.ride import Ride
 from facilities.queues import RideQueue, ServiceQueue
 from facilities.food import BurgerTruck, IceCreamStand
 from metrics_recorder import MetricsRecorder
+import inspect
+from facilities import ride_instances
 
 
 class IdGenerator:
@@ -34,38 +36,26 @@ def build_park_from_config(cfg: dict, clock: Clock, metrics: MetricsRecorder) ->
     """Build the Park object with all rides from configuration."""
     park = Park(clock, metrics)
     
-    # Create rides from config
-    rides_cfg = cfg.get("rides", [])
+    # Instantiate all rides defined in source/facilities/ride_instances.py
+    # (ignore YAML `rides` entries; all rides will come from the ride_instances module)
     park.rides = []
-    
-    for r_cfg in rides_cfg:
-        name = r_cfg["name"]
-        capacity = r_cfg["capacity"]
-        run_duration = r_cfg["run_duration"]
-        board_window = r_cfg["board_window"]
-        queue_capacity = r_cfg.get("queue_capacity", 100)
-        popularity = r_cfg.get("popularity", 0.5)
-        
-        # Create queue for this ride
-        fastpass_enabled = cfg.get("policy", {}).get("fastpass", False)
-        queue = RideQueue(
-            support_priority=fastpass_enabled,
-            max_regular=queue_capacity,
-            max_priority=queue_capacity // 2 if fastpass_enabled else None
-        )
-        
-        # Create ride
-        ride = Ride(
-            name=name,
-            capacity=capacity,
-            run_duration=run_duration,
-            board_window=board_window,
-            queue=queue,
-            clock=clock,
-            metrics=metrics,
-            popularity=popularity
-        )
-        park.rides.append(ride)
+    fastpass_enabled = cfg.get("policy", {}).get("fastpass", False)
+    queue_capacity = 100
+
+    for name, obj in inspect.getmembers(ride_instances, inspect.isclass):
+        try:
+            if issubclass(obj, Ride) and obj is not Ride:
+                queue = RideQueue(
+                    support_priority=fastpass_enabled,
+                    max_regular=queue_capacity,
+                    max_priority=queue_capacity // 2 if fastpass_enabled else None
+                )
+                # ride_instances classes expect (queue, clock, metrics=None)
+                ride = obj(queue, clock, metrics)
+                park.rides.append(ride)
+        except Exception:
+            # skip anything that isn't compatible with the expected constructor
+            continue
     
     # Create food facilities
     food_cfg = cfg.get("food", [])
@@ -162,10 +152,15 @@ def main():
     
     # Close metrics and generate visualization
     metrics.close()
-    
+
     print("\n" + "="*60)
     print("Generating wait time visualization...")
-    metrics.generate_wait_time_graph()
+    # Pass the list of active ride names so the graph ignores old/removed rides
+    try:
+        active_ride_names = [r.name for r in park.rides]
+    except Exception:
+        active_ride_names = None
+    metrics.generate_wait_time_graph(include_rides=active_ride_names)
     print("="*60)
     print("✅ Simulation complete!")
     print(f"📈 Metrics saved to: {metrics._path}")

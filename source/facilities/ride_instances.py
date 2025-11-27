@@ -1,4 +1,4 @@
-from ride import Ride
+from .ride import Ride
 
 class RollerCoaster(Ride):
     """Fast, thrilling ride with high popularity."""
